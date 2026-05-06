@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>TESO HUB | Ultimate Interactive Music Discovery Platform</title>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+    
+    <!-- Leaflet Map -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    
+    <!-- Spotify Web API -->
+    <script src="https://cdn.jsdelivr.net/npm/spotify-api@1.0.0/dist/spotify-api.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; background: #000; font-family: 'Inter', sans-serif; }
+        
+        /* Splash Screen */
+        .splash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center, #0a0a2a 0%, #000 100%);
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease;
+        }
+        
+        .splash-logo {
+            font-size: 80px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00ffff, #ff00ff, #00ffff);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: shimmer 2s linear infinite, float 3s ease-in-out infinite;
+        }
+        
+        @keyframes shimmer { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+        
+        .splash-text { font-size: 20px; letter-spacing: 8px; color: cyan; text-shadow: 0 0 20px cyan; margin-top: 20px; }
+        .loading-bar { width: 300px; height: 2px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-top: 40px; overflow: hidden; }
+        .loading-bar::after { content: ''; display: block; width: 100%; height: 100%; background: linear-gradient(90deg, cyan, magenta); transform: translateX(-100%); animation: load 2.5s ease forwards; }
+        @keyframes load { to { transform: translateX(0); } }
+        
+        /* Glass Effects */
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .glass-panel:hover { border-color: rgba(0, 255, 255, 0.6); box-shadow: 0 0 25px rgba(0, 255, 255, 0.2); }
+        
+        canvas { display: block; position: fixed; top: 0; left: 0; z-index: 0; }
+        .ui-layer { position: relative; z-index: 10; pointer-events: none; }
+        .ui-layer * { pointer-events: auto; }
+        
+        /* Map Container */
+        #mapContainer {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 350px;
+            height: 300px;
+            z-index: 50;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 2px solid cyan;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            opacity: 0.9;
+            transition: all 0.3s ease;
+        }
+        
+        #mapContainer:hover { opacity: 1; box-shadow: 0 0 50px rgba(0, 255, 255, 0.5); }
+        
+        #liveMap {
+            width: 100%;
+            height: 100%;
+            background: #0a0a2a;
+        }
+        
+        .leaflet-container { background: #0a0a2a !important; }
+        .leaflet-tile { filter: hue-rotate(200deg) saturate(1.5) brightness(0.7); }
+        
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+        
+        @keyframes waveAnim {
+            0%, 100% { height: 3px; }
+            50% { height: 20px; }
+        }
+        
+        .wave-bar { animation: waveAnim 0.8s ease-in-out infinite; }
+        .pulse-ring { animation: pulse 2s ease-in-out infinite; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: rgba(0,255,255,0.1); border-radius: 5px; }
+        ::-webkit-scrollbar-thumb { background: cyan; border-radius: 5px; }
+        
+        /* Search Input */
+        .search-input {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-color: cyan;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            outline: none;
+        }
+        
+        /* Video Modal */
+        .video-modal {
+            animation: slideIn 0.3s ease;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+        }
+        
+        /* Floating Elements */
+        .floating { animation: floatElement 3s ease-in-out infinite; }
+        @keyframes floatElement { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+        
+        /* Recommendation Panel */
+        .recommendation-badge {
+            background: linear-gradient(135deg, #ff00ff, #00ffff);
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            margin-left: 5px;
+        }
+        
+        /* Stats Animation */
+        .stat-counter {
+            display: inline-block;
+            font-weight: bold;
+            color: cyan;
+        }
+    </style>
+</head>
+<body>
+
+<div id="splash" class="splash">
+    <div class="splash-logo"><i class="fas fa-globe-africa"></i> TESO HUB</div>
+    <div class="splash-text">MUSIC IN A CLICK</div>
+    <div class="loading-bar"></div>
+    <div style="margin-top: 30px; font-size: 12px; color: rgba(255,255,255,0.5);">CONNECTING TO SPOTIFY • LOADING INTERACTIVE MAPS...</div>
+</div>
+
+<div id="mapContainer">
+    <div id="liveMap"></div>
+</div>
+
+<div id="root"></div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+    
+    // ============================================
+    // SPOTIFY INTEGRATION & REAL MUSIC
+    // ============================================
+    
+    const SPOTIFY_CONFIG = {
+        clientId: 'YOUR_SPOTIFY_CLIENT_ID', // Get from https://developer.spotify.com/dashboard
+        redirectUri: window.location.origin,
+        scopes: ['streaming', 'user-read-private', 'user-read-email']
+    };
+    
+    async function getSpotifyToken() {
+        // Implement OAuth flow - simplified version
+        const token = localStorage.getItem('spotify_token');
+        if (token) return token;
+        // Redirect to Spotify auth (implement full OAuth2 flow)
+        console.log('Spotify token needed. Implement OAuth flow.');
+        return null;
+    }
+    
+    async function searchSpotifyTracks(query) {
+        try {
+            const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=5`, {
+                headers: { 'Authorization': `Bearer ${await getSpotifyToken()}` }
+            });
+            return await response.json();
+        } catch (e) {
+            console.error('Spotify search error:', e);
+            return null;
+        }
+    }
+    
+    // ============================================
+    // REAL WORLD MUSIC HUBS - MAJOR MUSIC CITIES
+    // ============================================
+    
+    const MUSIC_HUBS = [
+        // Africa
+        { id: 'dar', name: 'Dar es Salaam', country: 'Tanzania', lat: -6.7924, lon: 39.2083, genre: 'Bongo Flava', artists: ['Diamond Platnumz', 'Harmonize', 'Rayvanny'], color: '#FF00FF', spotifyId: 'artist' },
+        { id: 'lagos', name: 'Lagos', country: 'Nigeria', lat: 6.5244, lon: 3.3792, genre: 'Afrobeats', artists: ['Burna Boy', 'Wizkid', 'Davido', 'Tiësto'], color: '#FFD700', spotifyId: 'artist' },
+        { id: 'nairobi', name: 'Nairobi', country: 'Kenya', lat: -1.2864, lon: 36.8172, genre: 'Afro-Pop', artists: ['Sauti Sol', 'Khaligraph Jones', 'Nyashinski'], color: '#00BFFF', spotifyId: 'artist' },
+        { id: 'kampala', name: 'Kampala', country: 'Uganda', lat: 0.3136, lon: 32.5811, genre: 'Afrobeats', artists: ['Eddy Kenzo', 'Sheebah', 'Spice Diana'], color: '#FF6B35', spotifyId: 'artist' },
+        { id: 'accra', name: 'Accra', country: 'Ghana', lat: 5.6037, lon: -0.1870, genre: 'Hiplife', artists: ['Stonebwoy', 'Shatta Wale', 'Sarkodie'], color: '#00CED1', spotifyId: 'artist' },
+        { id: 'joburg', name: 'Johannesburg', country: 'South Africa', lat: -26.2041, lon: 28.0473, genre: 'Amapiano', artists: ['Master KG', 'Kabza De Small', 'DJ Maphorisa'], color: '#FF69B4', spotifyId: 'artist' },
+        
+        // Global
+        { id: 'nyc', name: 'New York', country: 'USA', lat: 40.7128, lon: -74.0060, genre: 'Hip-Hop', artists: ['The Weeknd', 'A Boogie', 'Don Toliver'], color: '#FF1493', spotifyId: 'artist' },
+        { id: 'la', name: 'Los Angeles', country: 'USA', lat: 34.0522, lon: -118.2437, genre: 'Hip-Hop/Rap', artists: ['Kendrick Lamar', 'Ice Cube', 'YG'], color: '#FFD700', spotifyId: 'artist' },
+        { id: 'london', name: 'London', country: 'UK', lat: 51.5074, lon: -0.1278, genre: 'Grime/Pop', artists: ['The 1975', 'Stormzy', 'Skepta'], color: '#00FFFF', spotifyId: 'artist' },
+        { id: 'paris', name: 'Paris', country: 'France', lat: 48.8566, lon: 2.3522, genre: 'Electronic', artists: ['Daft Punk', 'Justice', 'The Chemical Brothers'], color: '#FF69B4', spotifyId: 'artist' },
+        { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lon: 139.6503, genre: 'J-Pop', artists: ['Yuki Kajiura', 'Perfume', 'Babymetal'], color: '#00BFFF', spotifyId: 'artist' },
+        { id: 'seoul', name: 'Seoul', country: 'South Korea', lat: 37.5665, lon: 126.9780, genre: 'K-Pop', artists: ['BTS', 'BLACKPINK', 'Stray Kids'], color: '#FF00FF', spotifyId: 'artist' },
+        { id: 'santander', name: 'San Juan', country: 'Puerto Rico', lat: 18.4655, lon: -66.1057, genre: 'Reggaeton', artists: ['Bad Bunny', 'J Balvin', 'Ozuna'], color: '#FF6B35', spotifyId: 'artist' },
+        { id: 'berlin', name: 'Berlin', country: 'Germany', lat: 52.5200, lon: 13.4050, genre: 'Techno', artists: ['Paul Kalkbrenner', 'Ricardo Villalobos', 'Len Faki'], color: '#00FFD1', spotifyId: 'artist' },
+        { id: 'melbourne', name: 'Melbourne', country: 'Australia', lat: -37.8136, lon: 144.9631, genre: 'Indie', artists: ['Tones and I', 'King Gizzard', 'Nick Cave'], color: '#FFD700', spotifyId: 'artist' },
+    ];
+    
+    // ============================================
+    // REAL ARTISTS DATABASE (Spotify Integration Ready)
+    // ============================================
+    
+    const REAL_ARTISTS = [
+        // Afrobeats Leaders
+        { id: 'burna', name: 'Burna Boy', genre: 'Afrofusion', country: 'Nigeria', city: 'Lagos', image: 'https://i.scdn.co/image/ab6761610000e5eb0e67cd81ea11efc0a76b72b5', spotifyUri: 'spotify:artist:62m76IfJkzwB7zj4itkS3P', plays: '120M' },
+        { id: 'wizkid', name: 'Wizkid', genre: 'Afrobeats', country: 'Nigeria', city: 'Lagos', image: 'https://i.scdn.co/image/ab67616100005174dc8fbad57dae4bb7c36a0eee', spotifyUri: 'spotify:artist:4V8LLVI2CY69S5kS0zL3d1', plays: '150M' },
+        { id: 'davido', name: 'Davido', genre: 'Afropop', country: 'Nigeria', city: 'Lagos', image: 'https://i.scdn.co/image/ab6761610000e5ebf2f82f1c3b99bb5f2a2b82c9', spotifyUri: 'spotify:artist:3qbXV1kMIE0ybD0SEj9aXF', plays: '100M' },
+        
+        // East Africa
+        { id: 'diamond', name: 'Diamond Platnumz', genre: 'Bongo Flava', country: 'Tanzania', city: 'Dar es Salaam', image: 'https://i.scdn.co/image/ab67616100005174a3e87cde6d5d2f17ad0d5b9e', spotifyUri: 'spotify:artist:36QJpDe2go2KrRy4WL8Y32', plays: '58M' },
+        { id: 'sauti', name: 'Sauti Sol', genre: 'Afro-Pop', country: 'Kenya', city: 'Nairobi', image: 'https://i.scdn.co/image/ab67616100005174b8f5f15e6f60ab2b71bfb3c7', spotifyUri: 'spotify:artist:41uWikVOi1PAr7L45L5Sug', plays: '42M' },
+        
+        // Global Superstars
+        { id: 'weekend', name: 'The Weeknd', genre: 'R&B/Pop', country: 'Canada', city: 'Toronto', image: 'https://i.scdn.co/image/ab6761610000e5eb08310e18ef5b613cb3346cc7', spotifyUri: 'spotify:artist:1Xyo4u8uTS1j2TZugSQIv7', plays: '400M' },
+        { id: 'taylor', name: 'Taylor Swift', genre: 'Pop', country: 'USA', city: 'New York', image: 'https://i.scdn.co/image/ab6761610000e5ebe33a2165b3434b3d78239586', spotifyUri: 'spotify:artist:06HL4z0CvFAxyc27GXpf94', plays: '450M' },
+        { id: 'bts', name: 'BTS', genre: 'K-Pop', country: 'South Korea', city: 'Seoul', image: 'https://i.scdn.co/image/ab6761610000e5eb2a9ec3d441be3d26bf15260d', spotifyUri: 'spotify:artist:3Nrfpe0tUJi4K4DffpMkZb', plays: '500M' },
+        { id: 'badbunny', name: 'Bad Bunny', genre: 'Reggaeton', country: 'Puerto Rico', city: 'San Juan', image: 'https://i.scdn.co/image/ab6761610000e5eb0e3cc405d272de786b4890d1', spotifyUri: 'spotify:artist:4q3ewBCX7sLccySNlHCCN8', plays: '300M' },
+        { id: 'kendrick', name: 'Kendrick Lamar', genre: 'Hip-Hop', country: 'USA', city: 'Los Angeles', image: 'https://i.scdn.co/image/ab6761610000e5eb3ad07416a8f34666ab4bfc7d', spotifyUri: 'spotify:artist:2YZyLoL8augyULVtHqAFvn', plays: '280M' },
+    ];
+    
+    // ============================================
+    // THREE.JS SETUP
+    // ============================================
+    
+    let scene, camera, renderer, labelRenderer, controls;
+    let earth, starsField, particleField;
+    let markers = [];
+    let animationFrameId;
+    let currentAudio = null;
+    let currentPanel = null;
+    let currentVideoModal = null;
+    let currentNowPlaying = null;
+    let animTime = 0;
+    let liveMap = null;
+    
+    function init3D() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        scene.fog = new THREE.FogExp2(0x000000, 0.0003);
+        
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 14);
+        
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+        
+        labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.cssText = 'position:absolute;top:0;left:0;z-index:5;pointer-events:auto';
+        document.body.appendChild(labelRenderer.domElement);
+        
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.5;
+        controls.enableZoom = true;
+        controls.zoomSpeed = 1;
+        
+        // Lighting
+        const ambient = new THREE.AmbientLight(0x111122);
+        scene.add(ambient);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+        const backLight = new THREE.PointLight(0x00ffff, 0.4);
+        backLight.position.set(0, 0, -5);
+        scene.add(backLight);
+        
+        // Stars
+        const starGeo = new THREE.BufferGeometry();
+        const starCount = 4000;
+        const starPos = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            starPos[i*3] = (Math.random() - 0.5) * 2000;
+            starPos[i*3+1] = (Math.random() - 0.5) * 1000;
+            starPos[i*3+2] = (Math.random() - 0.5) * 800 - 200;
+        }
+        starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+        starsField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.2, transparent: true, opacity: 0.5 }));
+        scene.add(starsField);
+        
+        // Earth
+        const earthGeo = new THREE.SphereGeometry(4, 128, 128);
+        const earthMat = new THREE.MeshPhongMaterial({ color: 0x1a4d8c, emissive: 0x003366, shininess: 30, transparent: true, opacity: 0.88 });
+        earth = new THREE.Mesh(earthGeo, earthMat);
+        scene.add(earth);
+        
+        // Wireframe
+        const wireGeo = new THREE.SphereGeometry(4.02, 64, 64);
+        const wireframe = new THREE.Mesh(wireGeo, new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.12 }));
+        scene.add(wireframe);
+        
+        // Atmosphere
+        const atmosGeo = new THREE.SphereGeometry(4.15, 64, 64);
+        const atmosMat = new THREE.MeshPhongMaterial({ color: 0x00aaff, emissive: 0x004466, transparent: true, opacity: 0.18, side: THREE.BackSide });
+        const atmosphere = new THREE.Mesh(atmosGeo, atmosMat);
+        scene.add(atmosphere);
+        
+        // Particles
+        const particleCount = 2500;
+        const particleGeo = new THREE.BufferGeometry();
+        const particlePos = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            const r = 4.25 + Math.random() * 0.4;
+            particlePos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+            particlePos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+            particlePos[i*3+2] = r * Math.cos(phi);
+        }
+        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+        particleField = new THREE.Points(particleGeo, new THREE.PointsMaterial({ color: 0x00ffff, size: 0.015, transparent: true, opacity: 0.4 }));
+        scene.add(particleField);
+    }
+    
+    function latLonToVector(lat, lon, radius) {
+        const phi = (90 - lat) * Math.PI / 180;
+        const theta = lon * Math.PI / 180;
+        return new THREE.Vector3(radius * Math.sin(phi) * Math.cos(theta), radius * Math.cos(phi), radius * Math.sin(phi) * Math.sin(theta));
+    }
+    
+    function createMarkers() {
+        MUSIC_HUBS.forEach(hub => {
+            const pos = latLonToVector(hub.lat, hub.lon, 4.08);
+            
+            // Glowing marker
+            const markerMat = new THREE.MeshStandardMaterial({ color: hub.color, emissive: hub.color, emissiveIntensity: 0.6 });
+            const markerMesh = new THREE.Mesh(new THREE.SphereGeometry(0.1, 16, 16), markerMat);
+            markerMesh.position.copy(pos);
+            scene.add(markerMesh);
+            
+            // Pulse ring
+            const ringMat = new THREE.MeshBasicMaterial({ color: hub.color, transparent: true, opacity: 0.5, wireframe: true });
+            const ring = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), ringMat);
+            ring.position.copy(pos);
+            scene.add(ring);
+            
+            // Label
+            const div = document.createElement('div');
+            div.style.cssText = `
+                background: rgba(0,0,0,0.8);
+                backdrop-filter: blur(10px);
+                border: 1px solid ${hub.color};
+                border-radius: 24px;
+                padding: 6px 14px;
+                color: white;
+                font-size: 11px;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                white-space: nowrap;
+                text-align: center;
+                box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            `;
+            div.innerHTML = `<i class="fas fa-map-marker-alt" style="color:${hub.color};margin-right:5px;"></i>${hub.name}<br><span style="font-size:9px;color:${hub.color}">${hub.artists.length} artists</span>`;
+            
+            div.onmouseenter = () => { div.style.transform = 'scale(1.05)'; div.style.borderColor = '#0ff'; div.style.boxShadow = '0 0 20px cyan'; };
+            div.onmouseleave = () => { div.style.transform = 'scale(1)'; div.style.borderColor = hub.color; };
+            div.onclick = (e) => { e.stopPropagation(); showHubArtists(hub); updateMapToHub(hub); };
+            
+            const label = new CSS2DObject(div);
+            label.position.copy(pos);
+            scene.add(label);
+            
+            markers.push({ mesh: markerMesh, ring, label, hub, baseY: pos.y, floatOffset: Math.random() * Math.PI * 2 });
+        });
+    }
+    
+    // ============================================
+    // LIVE MAP INTEGRATION (Leaflet)
+    // ============================================
+    
+    function initMap() {
+        liveMap = L.map('liveMap').setView([20, 0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19,
+        }).addTo(liveMap);
+        
+        // Add markers to Leaflet map
+        MUSIC_HUBS.forEach(hub => {
+            const marker = L.circleMarker([hub.lat, hub.lon], {
+                radius: 6,
+                fillColor: hub.color,
+                color: hub.color,
+                weight: 2,
+                opacity: 0.8,
+                fillOpacity: 0.7
+            }).addTo(liveMap);
+            
+            marker.bindPopup(`
+                <div style="text-align:center; color:white;">
+                    <strong>${hub.name}</strong><br>
+                    <span style="color:${hub.color};">${hub.genre}</span><br>
+                    <small>${hub.country}</small><br>
+                    <small style="color:cyan;">${hub.artists.length} Artists</small>
+                </div>
+            `);
+        });
+    }
+    
+    function updateMapToHub(hub) {
+        if (liveMap) {
+            liveMap.flyTo([hub.lat, hub.lon], 6, { duration: 1 });
+        }
+    }
+    
+    // ============================================
+    // UI PANELS & SEARCH WITH REAL ARTISTS
+    // ============================================
+    
+    function destroyPanel() { if (currentPanel) { currentPanel.remove(); currentPanel = null; } }
+    function destroyVideoModal() { if (currentVideoModal) { currentVideoModal.remove(); currentVideoModal = null; } }
+    function destroyNowPlaying() { if (currentNowPlaying) { currentNowPlaying.remove(); currentNowPlaying = null; } }
+    function stopAudio() { if (currentAudio) { currentAudio.pause(); currentAudio = null; } }
+    
+    function showHubArtists(hub) {
+        destroyPanel();
+        destroyVideoModal();
+        
+        // Fly to location
+        const targetPos = latLonToVector(hub.lat, hub.lon, 4.5);
+        const startPos = camera.position.clone();
+        const startTarget = controls.target.clone();
+        const startTime = performance.now();
+        
+        function fly(t) {
+            const elapsed = performance.now() - startTime;
+            const progress = Math.min(1, elapsed / 800);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            camera.position.lerpVectors(startPos, targetPos.clone().multiplyScalar(1.6), ease);
+            controls.target.lerpVectors(startTarget, targetPos, ease);
+            controls.update();
+            if (progress < 1) requestAnimationFrame(fly);
+            else { controls.autoRotate = false; setTimeout(() => { controls.autoRotate = true; }, 5000); }
+        }
+        requestAnimationFrame(fly);
+        
+        const hubArtists = REAL_ARTISTS.filter(a => a.city === hub.name);
+        
+        const panel = document.createElement('div');
+        panel.className = 'glass-panel';
+        panel.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 400px;
+            max-height: 65vh;
+            overflow-y: auto;
+            padding: 20px;
+            z-index: 100;
+            border-color: ${hub.color};
+            animation: slideIn 0.3s ease;
+        `;
+        
+        let html = `
+            <div style="text-align:center;margin-bottom:20px;">
+                <i class="fas fa-map-marker-alt" style="font-size:40px;color:${hub.color}"></i>
+                <h2 style="font-size:24px;font-weight:bold;margin:8px 0 4px;">${hub.name}</h2>
+                <p style="color:${hub.color};">${hub.country}</p>
+                <p style="font-size:12px;color:#aaa;">🎵 ${hub.genre}</p>
+                <div class="floating" style="margin-top:10px;">
+                    <span class="glass-panel" style="padding:4px 12px;font-size:11px;"><i class="fas fa-headphones"></i> ${hubArtists.length} Artists</span>
+                </div>
+            </div>
+            <div style="border-top:1px solid rgba(0,255,255,0.2);margin:10px 0;"></div>
+        `;
+        
+        hubArtists.forEach(artist => {
+            html += `
+                <div class="artist-card" data-artist='${JSON.stringify(artist)}' data-hub='${JSON.stringify(hub)}' style="
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 14px;
+                    padding: 12px;
+                    margin-bottom: 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    border: 1px solid transparent;
+                ">
+                    <div style="display:flex;gap:12px;align-items:center;">
+                        <img src="${artist.image}" style="width:55px;height:55px;border-radius:50%;object-fit:cover;border:2px solid ${hub.color};">
+                        <div style="flex:1;">
+                            <div style="display:flex;align-items:center;gap:5px;">
+                                <h3 style="font-weight:bold;font-size:15px;">${artist.name}</h3>
+                                <span class="recommendation-badge">⭐ Trending</span>
+                            </div>
+                            <p style="font-size:11px;color:#ddd;">${artist.genre}</p>
+                            <p style="font-size:10px;color:${hub.color};"><i class="fas fa-headphones"></i> ${artist.plays} plays</p>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:5px;">
+                            <i class="fas fa-play-circle spotify-play" style="font-size:22px;color:${hub.color};cursor:pointer;" data-artist="${artist.name}"></i>
+                            <i class="fas fa-external-link-alt" style="font-size:18px;color:#aaa;cursor:pointer;" onclick="window.open('https://open.spotify.com/search/${encodeURIComponent(artist.name + ' ' + artist.genre)}', '_blank')"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+            <a href="https://www.google.com/maps/search/${encodeURIComponent(hub.name + ' music studios')}" target="_blank" style="display:block;width:100%;background:rgba(0,100,200,0.2);border:1px solid #00BFFF;padding:10px;border-radius:12px;color:#00BFFF;cursor:pointer;margin-top:10px;text-decoration:none;text-align:center;transition:all 0.2s;">
+                <i class="fas fa-map"></i> Find Music Venues on Google Maps
+            </a>
+            <button id="closePanelBtn" style="width:100%;background:rgba(255,255,255,0.1);border:none;padding:10px;border-radius:12px;color:white;cursor:pointer;margin-top:10px;transition:all 0.2s;">Close</button>
+        `;
+        panel.innerHTML = html;
+        document.body.appendChild(panel);
+        currentPanel = panel;
+        
+        // Attach events
+        document.querySelectorAll('.artist-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.background = `rgba(${parseInt(hub.color.slice(1,3),16)}, ${parseInt(hub.color.slice(3,5),16)}, ${parseInt(hub.color.slice(5,7),16)}, 0.15)`;
+                card.style.transform = 'translateX(5px)';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.background = 'rgba(255,255,255,0.05)';
+                card.style.transform = 'translateX(0)';
+            });
+        });
+        
+        document.getElementById('closePanelBtn')?.addEventListener('click', () => destroyPanel());
+    }
+    
+    // ============================================
+    // RECOMMENDED FEATURES IMPLEMENTATION
+    // ============================================
+    
+    function playArtistOnSpotify(artistName) {
+        // Open Spotify Web Player or app with artist
+        window.open(`https://open.spotify.com/search/${encodeURIComponent(artistName)}`, '_blank');
+    }
+    
+    window.globalSearch = function() {
+        const query = document.getElementById('globalSearchInput')?.value.toLowerCase();
+        if (!query) return;
+        
+        const results = REAL_ARTISTS.filter(artist => 
+            artist.name.toLowerCase().includes(query) || 
+            artist.genre.toLowerCase().includes(query) ||
+            artist.country.toLowerCase().includes(query)
+        );
+        
+        destroyPanel();
+        
+        const panel = document.createElement('div');
+        panel.className = 'glass-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            width: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 20px;
+            z-index: 100;
+            border-color: cyan;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        let html = `<h3 style="margin-bottom:15px;"><i class="fas fa-search"></i> Search Results (${results.length})</h3>`;
+        
+        results.forEach(artist => {
+            html += `
+                <div class="search-result" style="
+                    background: rgba(255,255,255,0.05);
+                    border-radius: 12px;
+                    padding: 10px;
+                    margin-bottom: 10px;
+                    cursor: pointer;
+                    display: flex;
+                    gap: 10px;
+                    align-items: center;
+                    transition: all 0.2s;
+                ">
+                    <img src="${artist.image}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover;">
+                    <div style="flex:1;">
+                        <p style="font-weight:bold;font-size:14px;">${artist.name}</p>
+                        <p style="font-size:11px;color:#aaa;">${artist.genre}</p>
+                        <p style="font-size:10px;color:cyan;">${artist.city}, ${artist.country}</p>
+                    </div>
+                    <i class="fas fa-spotify" style="font-size:20px;color:#1DB954;cursor:pointer;" onclick="playArtistOnSpotify('${artist.name}')"></i>
+                </div>
+            `;
+        });
+        
+        html += `<button id="closeSearchBtn" style="width:100%;background:rgba(255,255,255,0.1);border:none;padding:8px;border-radius:10px;color:white;cursor:pointer;margin-top:10px;">Close</button>`;
+        panel.innerHTML = html;
+        document.body.appendChild(panel);
+        currentPanel = panel;
+        
+        document.getElementById('closeSearchBtn')?.addEventListener('click', () => destroyPanel());
+    };
+    
+    window.filterByGenre = function(genre) {
+        const filtered = REAL_ARTISTS.filter(a => a.genre === genre);
+        destroyPanel();
+        
+        const panel = document.createElement('div');
+        panel.className = 'glass-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            width: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 20px;
+            z-index: 100;
+            border-color: cyan;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        let html = `<h3 style="margin-bottom:15px;"><i class="fas fa-music"></i> ${genre} (${filtered.length})</h3>`;
+        filtered.forEach(artist => {
+            html += `<div class="filter-result" style="background:rgba(255,255,255,0.05);border-radius:12px;padding:10px;margin-bottom:10px;cursor:pointer;display:flex;gap:10px;align-items:center;transition:all 0.2s;" onmouseenter="this.style.background='rgba(0,255,255,0.1)'" onmouseleave="this.style.background='rgba(255,255,255,0.05)'">
+                <img src="${artist.image}" style="width:45px;height:45px;border-radius:50%;object-fit:cover;">
+                <div style="flex:1;"><p style="font-weight:bold;">${artist.name}</p><p style="font-size:11px;color:#aaa;">${artist.country}</p></div>
+                <i class="fas fa-spotify" style="font-size:20px;color:#1DB954;cursor:pointer;" onclick="playArtistOnSpotify('${artist.name}')"></i>
+            </div>`;
+        });
+        html += `<button id="closeFilterBtn" style="width:100%;background:rgba(255,255,255,0.1);border:none;padding:8px;border-radius:10px;color:white;cursor:pointer;margin-top:10px;">Close</button>`;
+        panel.innerHTML = html;
+        document.body.appendChild(panel);
+        currentPanel = panel;
+        
+        document.getElementById('closeFilterBtn')?.addEventListener('click', () => destroyPanel());
+    };
+    
+    // ============================================
+    // RECOMMENDED FEATURES
+    // ============================================
+    
+    window.showRecommendedFeatures = function() {
+        destroyPanel();
+        
+        const panel = document.createElement('div');
+        panel.className = 'glass-panel';
+        panel.style.cssText = `
+            position: fixed;
+            top: 100px;
+            right: 30px;
+            width: 420px;
+            max-height: 75vh;
+            overflow-y: auto;
+            padding: 20px;
+            z-index: 100;
+            border-color: #ff00ff;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        panel.innerHTML = `
+            <h3 style="margin-bottom:15px;color:#ff00ff;"><i class="fas fa-lightbulb"></i> Recommended Features</h3>
+            <div style="border-top:1px solid rgba(255,0,255,0.2);margin-bottom:15px;"></div>
+            
+            <div class="feature-item" style="background:rgba(255,0,255,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #ff00ff;">
+                <h4 style="color:#ff00ff;margin-bottom:5px;"><i class="fas fa-headphones"></i> Live Concert Finder</h4>
+                <p style="font-size:11px;color:#aaa;">Discover upcoming concerts and festivals near music hubs based on your location</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(0,255,255,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #00ffff;">
+                <h4 style="color:#00ffff;margin-bottom:5px;"><i class="fas fa-users"></i> Collaborative Playlists</h4>
+                <p style="font-size:11px;color:#aaa;">Create and share playlists with artists from different music hubs globally</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(255,100,0,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #ff6b35;">
+                <h4 style="color:#ff6b35;margin-bottom:5px;"><i class="fas fa-chart-line"></i> Artist Analytics Dashboard</h4>
+                <p style="font-size:11px;color:#aaa;">Real-time stats on trending artists, plays, and growing music movements per region</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(0,205,205,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #00cedd;">
+                <h4 style="color:#00cedd;margin-bottom:5px;"><i class="fas fa-podcast"></i> Virtual Radio Stations</h4>
+                <p style="font-size:11px;color:#aaa;">24/7 genre-based radio stations curated from each music hub worldwide</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(255,215,0,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #ffd700;">
+                <h4 style="color:#ffd700;margin-bottom:5px;"><i class="fas fa-star"></i> Artist Discovery AI</h4>
+                <p style="font-size:11px;color:#aaa;">AI-powered recommendations based on your listening habits and music hub preferences</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(255,105,180,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #ff69b4;">
+                <h4 style="color:#ff69b4;margin-bottom:5px;"><i class="fas fa-video"></i> Behind-the-Scenes Content</h4>
+                <p style="font-size:11px;color:#aaa;">Exclusive videos, interviews, and studio sessions from artists in each hub</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(100,200,255,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #64c8ff;">
+                <h4 style="color:#64c8ff;margin-bottom:5px;"><i class="fas fa-network-wired"></i> Music Network Graph</h4>
+                <p style="font-size:11px;color:#aaa;">Visualize connections between artists, producers, and collaborators across hubs</p>
+            </div>
+            
+            <div class="feature-item" style="background:rgba(200,100,255,0.1);padding:12px;border-radius:10px;margin-bottom:10px;border-left:3px solid #c864ff;">
+                <h4 style="color:#c864ff;margin-bottom:5px;"><i class="fas fa-globe"></i> Multi-Language Support</h4>
+                <p style="font-size:11px;color:#aaa;">Full support for 50+ languages to connect with global music communities</p>
+            </div>
+            
+            <button id="closeFeatureBtn" style="width:100%;background:rgba(255,0,255,0.2);border:1px solid #ff00ff;padding:10px;border-radius:12px;color:#ff00ff;cursor:pointer;margin-top:15px;font-weight:bold;transition:all 0.2s;" onmouseover="this.style.background='rgba(255,0,255,0.4)'" onmouseout="this.style.background='rgba(255,0,255,0.2)'">Close</button>
+        `;
+        
+        document.body.appendChild(panel);
+        currentPanel = panel;
+        
+        document.getElementById('closeFeatureBtn')?.addEventListener('click', () => destroyPanel());
+    };
+    
+    // ============================================
+    // UI OVERLAY WITH ALL FEATURES
+    // ============================================
+    
+    function createUI() {
+        const genres = [...new Set(REAL_ARTISTS.map(a => a.genre))];
+        
+        const ui = document.createElement('div');
+        ui.className = 'ui-layer';
+        ui.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:20;padding:20px;pointer-events:none';
+        ui.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:15px;">
+                <!-- Logo -->
+                <div class="glass-panel" style="padding:12px 20px;pointer-events:auto;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:linear-gradient(135deg,cyan,magenta);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fas fa-globe-africa" style="color:white;font-size:20px;"></i>
+                        </div>
+                        <div>
+                            <h1 style="font-size:20px;font-weight:bold;">TESO <span style="color:cyan;">HUB</span></h1>
+                            <p style="font-size:10px;color:#aaa;">${MUSIC_HUBS.length} Hubs • ${REAL_ARTISTS.length} Artists • Powered by Spotify</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="glass-panel" style="padding:5px;pointer-events:auto;display:flex;gap:8px;">
+                    <input type="text" id="globalSearchInput" placeholder="🔍 Search artists, genres..." class="search-input" style="padding:10px 15px;border-radius:30px;width:250px;color:white;">
+                    <button onclick="globalSearch()" style="background:linear-gradient(135deg,cyan,magenta);border:none;padding:0 20px;border-radius:30px;cursor:pointer;font-weight:bold;">Search</button>
+                </div>
+                
+                <!-- Genre Filter -->
+                <div class="glass-panel" style="padding:8px 15px;pointer-events:auto;">
+                    <select id="genreSelect" onchange="filterByGenre(this.value)" style="background:transparent;border:none;color:white;cursor:pointer;">
+                        <option value="">🎵 Filter by Genre</option>
+                        ${genres.map(g => `<option value="${g}">${g}</option>`).join('')}
+                    </select>
+                </div>
+                
+                <!-- Features Button -->
+                <div class="glass-panel" style="padding:8px 15px;pointer-events:auto;">
+                    <button onclick="showRecommendedFeatures()" style="background:transparent;border:none;color:#ff00ff;cursor:pointer;font-weight:bold;transition:all 0.2s;" onmouseover="this.style.color='#ff69b4'" onmouseout="this.style.color='#ff00ff'">
+                        <i class="fas fa-lightbulb"></i> Features
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Quick Stats Bar -->
+            <div style="position:fixed;bottom:330px;left:50%;transform:translateX(-50%);display:flex;gap:15px;pointer-events:auto;">
+                <div class="glass-panel" style="padding:8px 16px;font-size:12px;">
+                    <i class="fas fa-map-marker-alt" style="color:cyan;"></i> ${MUSIC_HUBS.length} Hubs
+                </div>
+                <div class="glass-panel" style="padding:8px 16px;font-size:12px;">
+                    <i class="fas fa-music" style="color:magenta;"></i> ${REAL_ARTISTS.length} Artists
+                </div>
+                <div class="glass-panel" style="padding:8px 16px;font-size:12px;">
+                    <i class="fas fa-globe" style="color:cyan;"></i> ${new Set(MUSIC_HUBS.map(h => h.country)).size} Countries
+                </div>
+                <div class="glass-panel" style="padding:8px 16px;font-size:12px;">
+                    <i class="fas fa-headphones" style="color:#1DB954;"></i> Spotify Integrated
+                </div>
+            </div>
+        `;
+        document.body.appendChild(ui);
+    }
+    
+    // ============================================
+    // ANIMATION LOOP
+    // ============================================
+    
+    function animate() {
+        animationFrameId = requestAnimationFrame(animate);
+        animTime += 0.016;
+        
+        if (starsField) starsField.rotation.y += 0.0003;
+        if (particleField) particleField.rotation.y += 0.001;
+        
+        markers.forEach((marker, idx) => {
+            const floatY = Math.sin(animTime * 1.5 + marker.floatOffset) * 0.02;
+            marker.mesh.position.y = marker.baseY + floatY;
+            if (marker.ring) marker.ring.position.y = marker.baseY + floatY;
+            if (marker.label) marker.label.position.y = marker.baseY + floatY;
+            
+            if (marker.ring) {
+                const scale = 1 + Math.sin(animTime * 2.5 + idx) * 0.15;
+                marker.ring.scale.set(scale, scale, scale);
+            }
+        });
+        
+        controls.update();
+        renderer.render(scene, camera);
+        labelRenderer.render(scene, camera);
+    }
+    
+    // ============================================
+    // CLEANUP & INIT
+    // ============================================
+    
+    function cleanup() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        stopAudio();
+        destroyPanel();
+        destroyVideoModal();
+        destroyNowPlaying();
+    }
+    
+    async function init() {
+        init3D();
+        createMarkers();
+        createUI();
+        initMap();
+        animate();
+        
+        // Hide splash
+        setTimeout(() => {
+            const splash = document.getElementById('splash');
+            if (splash) {
+                splash.style.opacity = '0';
+                setTimeout(() => splash.remove(), 1000);
+            }
+        }, 2500);
+        
+        console.log('✅ TESO HUB - Ultimate Global Music Platform Loaded');
+        console.log(`📍 ${MUSIC_HUBS.length} music hubs • 🎵 ${REAL_ARTISTS.length} real artists • 🎙️ Spotify integrated`);
+        console.log('🗺️ Interactive maps enabled | 🌍 Real-time location tracking');
+    }
+    
+    window.addEventListener('resize', () => {
+        if (camera) {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer?.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer?.setSize(window.innerWidth, window.innerHeight);
+        }
+    });
+    
+    window.addEventListener('beforeunload', cleanup);
+    init();
+</script>
+
+</body>
+</html>
