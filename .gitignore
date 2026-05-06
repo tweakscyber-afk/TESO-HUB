@@ -1,0 +1,41 @@
+.gitignore
+# Configuration files with secrets
+config.js
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Build files
+dist/
+build/
+
+# Cache
+.cache/
+*.tmp
+
+# API Keys (never commit these!)
+spotify_token
+api_keys.json
+secrets.json
+
+# User data
+user_history.json
+user_playlists.json
