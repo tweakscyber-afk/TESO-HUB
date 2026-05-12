@@ -155,7 +155,7 @@
     <select id="regUserType"><option value="student">Student – 5,000 UGX</option><option value="adult">Adult – 10,000 UGX</option></select>
     <div style="background:#fff3e0; padding:14px; border-radius:16px; font-size:0.85rem; margin:8px 0;">
       💳 Pay to: <strong>0767310767</strong> (EJUKU JOB JESSE)<br>
-      Then enter activation code received via SMS.
+      Use activation code: <strong>BACK2SCHOOL2025</strong>
     </div>
     <input type="text" id="regActivationCode" placeholder="Activation code">
     <button class="btn btn-primary" id="btnRegisterSubmit"><span class="material-symbols-outlined">how_to_reg</span> Complete Registration</button>
@@ -211,16 +211,10 @@
     <h2 style="color:#005b9f;">🛡️ Admin Dashboard</h2>
     <div class="nav-tabs">
       <div class="nav-tab active" data-admin-tab="adminUsers">Pending Users</div>
-      <div class="nav-tab" data-admin-tab="adminCodes">Payment Codes</div>
       <div class="nav-tab" data-admin-tab="adminSupport">Support</div>
       <div class="nav-tab" data-admin-tab="adminWithdrawals">Withdrawals</div>
     </div>
     <div id="adminUsers" class="admin-tab"></div>
-    <div id="adminCodes" class="admin-tab hidden">
-      <input type="number" id="newCodeCount" placeholder="Number of codes" value="1">
-      <button class="btn btn-primary" id="btnGenerateCodes">Generate Codes</button>
-      <div id="codesList" style="margin-top:12px;"></div>
-    </div>
     <div id="adminSupport" class="admin-tab hidden"></div>
     <div id="adminWithdrawals" class="admin-tab hidden"></div>
     <button class="btn btn-outline" id="btnBackToDashboard">Back to Dashboard</button>
@@ -234,7 +228,6 @@ const SUPABASE_URL = "https://ykfbadyublrmsrjvbuwz.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZmJhZHl1YmxybXNyanZidXd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzAyMDcsImV4cCI6MjA5MzY0NjIwN30.yrcTrAXqt4ppxbN4n1VQAuHDfK7fdS2N0EuPQfgTUK0";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ---------- GLOBALS ----------
 let currentUser = null;
 let demoBalance = 2000;
 let todayTaskCount = 0;
@@ -474,7 +467,6 @@ async function performTask(type, baseReward) {
     currentUser.balance += reward;
     currentUser.tasks_completed += 1;
   } else if (success) {
-    // task completed but unpaid, still increment tasks_completed
     const { error } = await supabase.from('profiles').update({
       tasks_completed: currentUser.tasks_completed + 1
     }).eq('id', currentUser.id);
@@ -503,7 +495,6 @@ function updateDashboardUI() {
     wbtn.disabled = true;
     wbtn.innerHTML = `<span class="material-symbols-outlined">payments</span> Need ${35000 - currentUser.balance} UGX`;
   }
-  // Show/hide admin button if user is admin
   document.getElementById('btnAdminPanel').classList.toggle('hidden', !currentUser.is_admin);
 }
 
@@ -522,21 +513,6 @@ async function loadAdminPendingUsers() {
 window.approveUser = async (id) => {
   await supabase.from('profiles').update({ is_approved: true }).eq('id', id);
   loadAdminPendingUsers();
-};
-
-async function loadAdminCodes() {
-  const { data } = await supabase.from('payment_codes').select('*').order('created_at', { ascending: false });
-  const list = document.getElementById('codesList');
-  list.innerHTML = data?.map(c => `<div style="background:white;border-radius:16px;padding:12px;margin-bottom:6px;">${c.code} ${c.used ? '(used)' : '<button class="btn btn-primary" onclick="navigator.clipboard.writeText(\''+c.code+'\');showToast(\'Copied!\')">Copy</button>'}</div>`).join('');
-}
-document.getElementById('btnGenerateCodes').onclick = async () => {
-  const count = parseInt(document.getElementById('newCodeCount').value) || 1;
-  const codes = [];
-  for (let i = 0; i < count; i++) {
-    codes.push({ code: 'BCK-' + Math.random().toString(36).substring(2,8).toUpperCase() });
-  }
-  await supabase.from('payment_codes').insert(codes);
-  loadAdminCodes();
 };
 
 async function loadAdminSupport() {
@@ -679,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('dailyCount').textContent = todayTaskCount;
   };
 
-  // Registration
+  // Registration – HARDCODED ACTIVATION CODE
   document.getElementById('btnRegisterSubmit').onclick = async () => {
     const name = document.getElementById('regFullName').value.trim();
     const username = document.getElementById('regUsername').value.trim();
@@ -690,21 +666,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const userType = document.getElementById('regUserType').value;
     const code = document.getElementById('regActivationCode').value.trim();
     const pending = parseInt(localStorage.getItem('demoBalance') || '0');
+    
     if (!name || !username || !email || password.length < 6 || !phone.match(/^07[0-9]{8}$/)) {
       document.getElementById('regError').textContent = 'Fill all fields correctly';
       return;
     }
-    const { data: codeData } = await supabase.from('payment_codes').select('*').eq('code', code).eq('used', false).maybeSingle();
-    if (!codeData) { document.getElementById('regError').textContent = 'Invalid or used activation code'; return; }
+
+    // 👇 ONE CODE FOR EVERYONE
+    const MASTER_ACTIVATION_CODE = "BACK2SCHOOL2025";
+    if (code !== MASTER_ACTIVATION_CODE) {
+      document.getElementById('regError').textContent = 'Invalid activation code';
+      return;
+    }
+
     const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password });
     if (authErr) { document.getElementById('regError').textContent = authErr.message; return; }
+
     const userId = authData.user.id;
     const { error: profileErr } = await supabase.from('profiles').insert([{
       id: userId, full_name: name, username, phone, network, user_type: userType,
       balance: pending, ref_code: userId.substring(0,8).toUpperCase(), is_approved: false
     }]);
     if (profileErr) { document.getElementById('regError').textContent = 'Profile creation failed'; return; }
-    await supabase.from('payment_codes').update({ used: true }).eq('id', codeData.id);
+
     localStorage.removeItem('demoBalance');
     alert('Registered! Wait for admin approval, then sign in.');
     showScreen('screenSplash');
@@ -780,12 +764,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnAdminPanel').onclick = () => {
     showScreen('screenAdmin');
     loadAdminPendingUsers();
-    loadAdminCodes();
   };
   document.getElementById('btnBackToDashboard').onclick = () => {
     showScreen('screenDashboard');
     updateDashboardUI();
   };
+
   // Admin tabs
   document.querySelectorAll('.nav-tab[data-admin-tab]').forEach(tab => {
     tab.onclick = () => {
@@ -795,20 +779,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       const target = document.getElementById(tab.dataset.adminTab);
       target.classList.remove('hidden');
       if (tab.dataset.adminTab === 'adminUsers') loadAdminPendingUsers();
-      else if (tab.dataset.adminTab === 'adminCodes') loadAdminCodes();
       else if (tab.dataset.adminTab === 'adminSupport') loadAdminSupport();
       else if (tab.dataset.adminTab === 'adminWithdrawals') loadAdminWithdrawals();
     };
   });
-  document.getElementById('btnGenerateCodes').onclick = async () => {
-    const count = parseInt(document.getElementById('newCodeCount').value) || 1;
-    const codes = [];
-    for (let i = 0; i < count; i++) {
-      codes.push({ code: 'BCK-' + Math.random().toString(36).substring(2,8).toUpperCase() });
-    }
-    await supabase.from('payment_codes').insert(codes);
-    loadAdminCodes();
-  };
 });
 </script>
 </body>
