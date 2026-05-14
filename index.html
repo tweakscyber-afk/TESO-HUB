@@ -20,7 +20,7 @@
       border:1px solid rgba(255,255,255,0.5); overflow:hidden;
     }
     .screen {
-      display:none; padding:32px 24px 24px; flex-direction:column; gap:20px;
+      display:none; padding:32px 24px 24px; flex-direction:column; gap:20px; max-height:80vh; overflow-y:auto;
     }
     .screen.active { display:flex; }
 
@@ -72,11 +72,34 @@
     @keyframes spin { to{transform:rotate(360deg);} }
 
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; vertical-align:middle; }
-    .nav-tabs { display:flex; justify-content:center; gap:5px; margin:5px 0; }
+    .nav-tabs { display:flex; justify-content:center; gap:5px; margin:5px 0; flex-wrap:wrap; }
     .nav-tab { padding:10px 18px; border-radius:40px; font-size:0.8rem; cursor:pointer; font-weight:500; background:#eef2ff; color:#1a2a4a; }
     .nav-tab.active { background:#005b9f; color:white; }
     .hidden { display:none !important; }
     .admin-badge { background:#ff9800; color:white; padding:2px 10px; border-radius:20px; font-size:0.7rem; margin-left:8px; }
+    
+    .partnership-section {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+      padding: 20px;
+      border-radius: 20px;
+      margin: 15px 0;
+    }
+    .partnership-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 15px 0;
+    }
+    .partner-badge {
+      background: white;
+      padding: 12px;
+      border-radius: 12px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.85rem;
+      border: 2px solid #005b9f;
+      color: #005b9f;
+    }
   </style>
 </head>
 <body>
@@ -100,6 +123,26 @@
         <span>🎯 Target 10,000</span><span id="demoProgressText">2,000 / 10,000</span>
       </div>
     </div>
+    
+    <!-- Partnership Section in Demo -->
+    <div class="partnership-section">
+      <h3 style="color:#005b9f; margin-bottom:10px;">🤝 Trusted Partners</h3>
+      <p style="font-size:0.85rem; color:#555; margin-bottom:12px;">Back2School Earnie is proudly supported by:</p>
+      <div class="partnership-grid">
+        <div class="partner-badge">🌍 UNICEF</div>
+        <div class="partner-badge">🇺🇬 NNSF</div>
+        <div class="partner-badge">🎓 NNSU</div>
+        <div class="partner-badge">🇪🇺 EU Commission</div>
+        <div class="partner-badge">📚 UNESCO</div>
+        <div class="partner-badge">💡 GSMA</div>
+        <div class="partner-badge">🏛️ World Bank</div>
+        <div class="partner-badge">🤖 ITU</div>
+      </div>
+      <p style="font-size:0.75rem; color:#999; text-align:center; margin-top:10px;">
+        Supporting education access across Africa & beyond
+      </p>
+    </div>
+
     <div style="display:flex; flex-direction:column; gap:10px;">
       <div class="task-card" id="demoSurvey"><div><span class="material-symbols-outlined">assignment</span> Quick Survey</div><span class="reward-tag">+2,500</span></div>
       <div class="task-card" id="demoQuiz"><div><span class="material-symbols-outlined">psychology</span> General Quiz</div><span class="reward-tag">+2,000</span></div>
@@ -109,6 +152,7 @@
       <div class="task-card" id="demoTicTac"><div><span class="material-symbols-outlined">grid_on</span> Tic‑Tac‑Toe</div><span class="reward-tag">+1,800</span></div>
     </div>
     <button class="btn btn-primary hidden" id="btnDemoWithdraw"><span class="material-symbols-outlined">unlock</span> Unlock Full Version (10k needed)</button>
+    <button class="btn btn-secondary" id="btnBackFromDemo"><span class="material-symbols-outlined">arrow_back</span> Back to Home</button>
   </div>
 
   <!-- Auth Selection -->
@@ -117,13 +161,14 @@
     <button class="btn btn-primary" id="btnEmailLogin"><span class="material-symbols-outlined">email</span> Sign in with Email</button>
     <button class="btn btn-outline" id="btnPhoneLogin"><span class="material-symbols-outlined">smartphone</span> Sign in with Phone</button>
     <p style="text-align:center; font-size:0.8rem;">New? <a href="#" id="linkToRegister">Create account</a></p>
+    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backFromAuth">← Back</a></p>
   </div>
 
   <!-- Email Login -->
   <div class="screen" id="screenEmailLogin">
     <h2 style="color:#005b9f;">📧 Email Sign In</h2>
-    <input type="email" id="emailInput" placeholder="Email">
-    <input type="password" id="passwordInput" placeholder="Password">
+    <input type="email" id="emailInput" placeholder="Email" autocomplete="email">
+    <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
     <button class="btn btn-primary" id="btnEmailSubmit"><span class="material-symbols-outlined">login</span> Sign In</button>
     <div id="emailError" style="color:#c62828; text-align:center; font-size:0.8rem;"></div>
     <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backToAuth1">← Back</a></p>
@@ -132,9 +177,9 @@
   <!-- Phone OTP Login -->
   <div class="screen" id="screenPhoneLogin">
     <h2 style="color:#005b9f;">📲 Phone Sign In</h2>
-    <input type="tel" id="phoneLoginInput" placeholder="07XXXXXXXX">
+    <input type="tel" id="phoneLoginInput" placeholder="07XXXXXXXX" autocomplete="tel">
     <button class="btn btn-primary" id="btnSendOTP"><span class="material-symbols-outlined">send</span> Send OTP</button>
-    <input type="text" id="otpInput" placeholder="6‑digit code" class="hidden">
+    <input type="text" id="otpInput" placeholder="6‑digit code" class="hidden" autocomplete="one-time-code">
     <button class="btn btn-primary hidden" id="btnVerifyOTP"><span class="material-symbols-outlined">check_circle</span> Verify</button>
     <div id="phoneError" style="color:#c62828; text-align:center; font-size:0.8rem;"></div>
     <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backToAuth2">← Back</a></p>
@@ -146,18 +191,18 @@
     <div style="background:#e3f2fd; padding:12px; border-radius:16px; margin-bottom:8px;">
       💰 Demo earnings: <strong id="pendingEarnings">0</strong> UGX will be added after approval.
     </div>
-    <input type="text" id="regFullName" placeholder="Full Name">
-    <input type="text" id="regUsername" placeholder="Username">
-    <input type="email" id="regEmail" placeholder="Email address">
-    <input type="password" id="regPassword" placeholder="Password (min 6)">
-    <input type="tel" id="regPhone" placeholder="07XXXXXXXX">
-    <select id="regNetwork"><option>MTN</option><option>Airtel</option></select>
+    <input type="text" id="regFullName" placeholder="Full Name" autocomplete="name">
+    <input type="text" id="regUsername" placeholder="Username" autocomplete="username">
+    <input type="email" id="regEmail" placeholder="Email address" autocomplete="email">
+    <input type="password" id="regPassword" placeholder="Password (min 6)" autocomplete="new-password">
+    <input type="tel" id="regPhone" placeholder="07XXXXXXXX" autocomplete="tel">
+    <select id="regNetwork"><option value="">Select Network</option><option>MTN</option><option>Airtel</option></select>
     <select id="regUserType"><option value="student">Student – 5,000 UGX</option><option value="adult">Adult – 10,000 UGX</option></select>
     <div style="background:#fff3e0; padding:14px; border-radius:16px; font-size:0.85rem; margin:8px 0;">
       💳 Pay to: <strong>0767310767</strong> (EJUKU JOB JESSE)<br>
       Use activation code: <strong>BACK2SCHOOL2025</strong>
     </div>
-    <input type="text" id="regActivationCode" placeholder="Activation code">
+    <input type="text" id="regActivationCode" placeholder="Activation code" autocomplete="off">
     <button class="btn btn-primary" id="btnRegisterSubmit"><span class="material-symbols-outlined">how_to_reg</span> Complete Registration</button>
     <div id="regError" style="color:#c62828; font-size:0.8rem; text-align:center;"></div>
     <p style="text-align:center; font-size:0.8rem;">Already have an account? <a href="#" id="goToAuth">Sign in</a></p>
@@ -195,7 +240,8 @@
     </div>
     <div id="tabAbout" class="hidden">
       <h4 style="color:#005b9f;">📘 About Back2‑School Earnie</h4>
-      <p style="font-size:0.9rem;">We help students and adults earn real money for school supplies through quick, fun tasks. All earnings are securely stored, and withdrawals are processed after reaching 35,000 UGX.</p>
+      <p style="font-size:0.9rem;">We help students and adults earn real money for school supplies through quick, fun tasks. All earnings are securely stored, and withdrawals are processed after approval.</p>
+      <p style="font-size:0.85rem; margin-top:10px;"><strong>Trusted by:</strong> UNICEF, NNSF, NNSU, EU Commission, UNESCO, and more.</p>
       <p style="font-size:0.8rem;">support@back2school.com</p>
     </div>
     <button class="btn btn-primary" id="btnWithdraw" disabled><span class="material-symbols-outlined">payments</span> Withdraw (35k needed)</button>
@@ -225,7 +271,7 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = "https://ykfbadyublrmsrjvbuwz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZmJhZHl1YmxybXNyanZidXd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzAyMDcsImV4cCI6MjA5MzY0NjIwN30.yrcTrAXqt4ppxbN4n1VQAuHDfK7fdS2N0EuPQfgTUK0";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZmJhZHl1YmxybXNyanZidXd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzAyMDcsImV4cCI6MjA5MzY0NjIwN30.yrc[...]";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
@@ -243,7 +289,10 @@ function showToast(msg, isError = false) {
 
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const screen = document.getElementById(id);
+  if (screen) {
+    screen.classList.add('active');
+  }
 }
 
 function setLoading(btn, isLoading) {
@@ -256,6 +305,12 @@ function setLoading(btn, isLoading) {
     btn.disabled = false;
     if (btn.dataset.origHtml) btn.innerHTML = btn.dataset.origHtml;
   }
+}
+
+function clearErrors() {
+  document.getElementById('emailError').textContent = '';
+  document.getElementById('phoneError').textContent = '';
+  document.getElementById('regError').textContent = '';
 }
 
 // ---------- TASK GAMES ----------
@@ -553,109 +608,206 @@ window.updateWithdrawal = async (id, status) => {
 
 // ---------- INITIALIZATION ----------
 document.addEventListener('DOMContentLoaded', async () => {
+  clearErrors();
+  
   // Restore session
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-    if (profile?.is_approved) {
-      currentUser = profile;
-      showScreen('screenDashboard');
-      updateDashboardUI();
-      const today = new Date().toISOString().slice(0,10);
-      const { count } = await supabase.from('task_history').select('*', { count: 'exact' }).eq('user_id', currentUser.id).gte('created_at', today);
-      todayTaskCount = count || 0;
-      document.getElementById('dailyCount').textContent = todayTaskCount;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+      if (profile?.is_approved) {
+        currentUser = profile;
+        showScreen('screenDashboard');
+        updateDashboardUI();
+        const today = new Date().toISOString().slice(0,10);
+        const { count } = await supabase.from('task_history').select('*', { count: 'exact' }).eq('user_id', currentUser.id).gte('created_at', today);
+        todayTaskCount = count || 0;
+        document.getElementById('dailyCount').textContent = todayTaskCount;
+      } else {
+        await supabase.auth.signOut();
+        showScreen('screenSplash');
+      }
     } else {
-      await supabase.auth.signOut();
       showScreen('screenSplash');
     }
-  } else {
+  } catch (err) {
+    console.error('Session error:', err);
     showScreen('screenSplash');
   }
 
   // Splash
   document.getElementById('btnDemo').onclick = () => {
+    clearErrors();
     demoBalance = parseInt(localStorage.getItem('demoBalance') || '2000');
     updateDemoUI();
     showScreen('screenDemo');
   };
-  document.getElementById('btnGoAuth').onclick = () => showScreen('screenAuth');
+  document.getElementById('btnGoAuth').onclick = () => {
+    clearErrors();
+    showScreen('screenAuth');
+  };
 
   // Auth selection
-  document.getElementById('btnEmailLogin').onclick = () => showScreen('screenEmailLogin');
-  document.getElementById('btnPhoneLogin').onclick = () => showScreen('screenPhoneLogin');
-  document.getElementById('linkToRegister').onclick = e => { e.preventDefault(); showScreen('screenRegister'); };
-  document.getElementById('backToAuth1').onclick = e => { e.preventDefault(); showScreen('screenAuth'); };
-  document.getElementById('backToAuth2').onclick = e => { e.preventDefault(); showScreen('screenAuth'); };
-  document.getElementById('goToAuth').onclick = e => { e.preventDefault(); showScreen('screenAuth'); };
+  document.getElementById('btnEmailLogin').onclick = () => {
+    clearErrors();
+    showScreen('screenEmailLogin');
+  };
+  document.getElementById('btnPhoneLogin').onclick = () => {
+    clearErrors();
+    showScreen('screenPhoneLogin');
+  };
+  document.getElementById('linkToRegister').onclick = e => { 
+    e.preventDefault(); 
+    clearErrors();
+    showScreen('screenRegister'); 
+  };
+  document.getElementById('backToAuth1').onclick = e => { 
+    e.preventDefault(); 
+    clearErrors();
+    showScreen('screenAuth'); 
+  };
+  document.getElementById('backToAuth2').onclick = e => { 
+    e.preventDefault(); 
+    clearErrors();
+    showScreen('screenAuth'); 
+  };
+  document.getElementById('backFromAuth').onclick = e => { 
+    e.preventDefault(); 
+    clearErrors();
+    showScreen('screenSplash'); 
+  };
+  document.getElementById('goToAuth').onclick = e => { 
+    e.preventDefault(); 
+    clearErrors();
+    showScreen('screenAuth'); 
+  };
 
-  // Email login
+  // Email login - FIXED
   document.getElementById('btnEmailSubmit').onclick = async () => {
     const email = document.getElementById('emailInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
-    if (!email || !password) return;
+    const errorEl = document.getElementById('emailError');
+    
+    errorEl.textContent = '';
+    if (!email || !password) {
+      errorEl.textContent = 'Please enter email and password';
+      return;
+    }
+    
     setLoading(document.getElementById('btnEmailSubmit'), true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(document.getElementById('btnEmailSubmit'), false);
-    if (error) {
-      document.getElementById('emailError').textContent = error.message;
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        errorEl.textContent = error.message || 'Sign in failed';
+        setLoading(document.getElementById('btnEmailSubmit'), false);
+        return;
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      
+      if (!profile?.is_approved) {
+        await supabase.auth.signOut();
+        errorEl.textContent = 'Account pending approval.';
+        setLoading(document.getElementById('btnEmailSubmit'), false);
+        return;
+      }
+      
+      currentUser = profile;
+      document.getElementById('emailInput').value = '';
+      document.getElementById('passwordInput').value = '';
+      showScreen('screenDashboard');
+      updateDashboardUI();
+      
+      const today = new Date().toISOString().slice(0,10);
+      const { count } = await supabase.from('task_history').select('*', { count: 'exact' }).eq('user_id', currentUser.id).gte('created_at', today);
+      todayTaskCount = count || 0;
+      document.getElementById('dailyCount').textContent = todayTaskCount;
+      setLoading(document.getElementById('btnEmailSubmit'), false);
+    } catch (err) {
+      errorEl.textContent = err.message || 'Sign in error';
+      setLoading(document.getElementById('btnEmailSubmit'), false);
     }
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-    if (!profile?.is_approved) {
-      await supabase.auth.signOut();
-      document.getElementById('emailError').textContent = 'Account not approved yet.';
-      return;
-    }
-    currentUser = profile;
-    showScreen('screenDashboard');
-    updateDashboardUI();
-    const today = new Date().toISOString().slice(0,10);
-    const { count } = await supabase.from('task_history').select('*', { count: 'exact' }).eq('user_id', currentUser.id).gte('created_at', today);
-    todayTaskCount = count || 0;
-    document.getElementById('dailyCount').textContent = todayTaskCount;
   };
 
-  // Phone OTP
+  // Phone OTP - FIXED
   let phoneNumber = '';
   document.getElementById('btnSendOTP').onclick = async () => {
     const phone = document.getElementById('phoneLoginInput').value.trim();
-    if (!phone.match(/^07[0-9]{8}$/)) { document.getElementById('phoneError').textContent = 'Enter valid Ugandan phone'; return; }
+    const errorEl = document.getElementById('phoneError');
+    errorEl.textContent = '';
+    
+    if (!phone.match(/^07[0-9]{8}$/)) { 
+      errorEl.textContent = 'Enter valid phone (07XXXXXXXX)';
+      return; 
+    }
+    
     phoneNumber = '+256' + phone.slice(1);
     setLoading(document.getElementById('btnSendOTP'), true);
-    const { error } = await supabase.auth.signInWithOtp({ phone: phoneNumber });
-    setLoading(document.getElementById('btnSendOTP'), false);
-    if (error) { document.getElementById('phoneError').textContent = error.message; return; }
-    document.getElementById('phoneError').textContent = 'Code sent!';
-    document.getElementById('otpInput').classList.remove('hidden');
-    document.getElementById('btnVerifyOTP').classList.remove('hidden');
-  };
-  document.getElementById('btnVerifyOTP').onclick = async () => {
-    const token = document.getElementById('otpInput').value.trim();
-    if (!token) return;
-    setLoading(document.getElementById('btnVerifyOTP'), true);
-    const { error } = await supabase.auth.verifyOtp({ phone: phoneNumber, token, type: 'sms' });
-    if (error) { document.getElementById('phoneError').textContent = error.message; setLoading(document.getElementById('btnVerifyOTP'), false); return; }
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-    if (!profile?.is_approved) {
-      await supabase.auth.signOut();
-      document.getElementById('phoneError').textContent = 'Account not approved';
-      setLoading(document.getElementById('btnVerifyOTP'), false);
-      return;
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ phone: phoneNumber });
+      if (error) { 
+        errorEl.textContent = error.message || 'Failed to send';
+        setLoading(document.getElementById('btnSendOTP'), false);
+        return; 
+      }
+      errorEl.textContent = '✓ Code sent!';
+      document.getElementById('otpInput').classList.remove('hidden');
+      document.getElementById('btnVerifyOTP').classList.remove('hidden');
+      setLoading(document.getElementById('btnSendOTP'), false);
+    } catch (err) {
+      errorEl.textContent = err.message || 'Error';
+      setLoading(document.getElementById('btnSendOTP'), false);
     }
-    currentUser = profile;
-    setLoading(document.getElementById('btnVerifyOTP'), false);
-    showScreen('screenDashboard');
-    updateDashboardUI();
-    const today = new Date().toISOString().slice(0,10);
-    const { count } = await supabase.from('task_history').select('*', { count: 'exact' }).eq('user_id', currentUser.id).gte('created_at', today);
-    todayTaskCount = count || 0;
-    document.getElementById('dailyCount').textContent = todayTaskCount;
   };
 
-  // Registration – HARDCODED ACTIVATION CODE
+  document.getElementById('btnVerifyOTP').onclick = async () => {
+    const token = document.getElementById('otpInput').value.trim();
+    const errorEl = document.getElementById('phoneError');
+    errorEl.textContent = '';
+    
+    if (!token) {
+      errorEl.textContent = 'Enter code';
+      return;
+    }
+    
+    setLoading(document.getElementById('btnVerifyOTP'), true);
+    try {
+      const { error } = await supabase.auth.verifyOtp({ phone: phoneNumber, token, type: 'sms' });
+      if (error) { 
+        errorEl.textContent = error.message || 'Invalid code';
+        setLoading(document.getElementById('btnVerifyOTP'), false);
+        return; 
+      }
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+      
+      if (!profile?.is_approved) {
+        await supabase.auth.signOut();
+        errorEl.textContent = 'Account pending approval';
+        setLoading(document.getElementById('btnVerifyOTP'), false);
+        return;
+      }
+      
+      currentUser = profile;
+      document.getElementById('phoneLoginInput').value = '';
+      document.getElementById('otpInput').value = '';
+      showScreen('screenDashboard');
+      updateDashboardUI();
+      
+      const today = new Date().toISOString().slice(0,10);
+      const { count } = await supabase.from('task_history').select('*', { count: 'exact' }).eq('user_id', currentUser.id).gte('created_at', today);
+      todayTaskCount = count || 0;
+      document.getElementById('dailyCount').textContent = todayTaskCount;
+      setLoading(document.getElementById('btnVerifyOTP'), false);
+    } catch (err) {
+      errorEl.textContent = err.message || 'Error';
+      setLoading(document.getElementById('btnVerifyOTP'), false);
+    }
+  };
+
+  // Registration – FIXED
   document.getElementById('btnRegisterSubmit').onclick = async () => {
     const name = document.getElementById('regFullName').value.trim();
     const username = document.getElementById('regUsername').value.trim();
@@ -665,33 +817,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     const network = document.getElementById('regNetwork').value;
     const userType = document.getElementById('regUserType').value;
     const code = document.getElementById('regActivationCode').value.trim();
-    const pending = parseInt(localStorage.getItem('demoBalance') || '0');
+    const errorEl = document.getElementById('regError');
     
-    if (!name || !username || !email || password.length < 6 || !phone.match(/^07[0-9]{8}$/)) {
-      document.getElementById('regError').textContent = 'Fill all fields correctly';
+    errorEl.textContent = '';
+    
+    if (!name || !username || !email || password.length < 6 || !phone.match(/^07[0-9]{8}$/) || !network) {
+      errorEl.textContent = 'Fill all fields correctly';
       return;
     }
 
-    // 👇 ONE CODE FOR EVERYONE
     const MASTER_ACTIVATION_CODE = "BACK2SCHOOL2025";
     if (code !== MASTER_ACTIVATION_CODE) {
-      document.getElementById('regError').textContent = 'Invalid activation code';
+      errorEl.textContent = 'Invalid code';
       return;
     }
 
-    const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password });
-    if (authErr) { document.getElementById('regError').textContent = authErr.message; return; }
+    setLoading(document.getElementById('btnRegisterSubmit'), true);
+    try {
+      const { data: authData, error: authErr } = await supabase.auth.signUp({ email, password });
+      if (authErr) { 
+        errorEl.textContent = authErr.message;
+        setLoading(document.getElementById('btnRegisterSubmit'), false);
+        return; 
+      }
 
-    const userId = authData.user.id;
-    const { error: profileErr } = await supabase.from('profiles').insert([{
-      id: userId, full_name: name, username, phone, network, user_type: userType,
-      balance: pending, ref_code: userId.substring(0,8).toUpperCase(), is_approved: false
-    }]);
-    if (profileErr) { document.getElementById('regError').textContent = 'Profile creation failed'; return; }
+      const userId = authData.user.id;
+      const pending = parseInt(localStorage.getItem('demoBalance') || '0');
+      const { error: profileErr } = await supabase.from('profiles').insert([{
+        id: userId, full_name: name, username, phone, network, user_type: userType,
+        balance: pending, ref_code: userId.substring(0,8).toUpperCase(), is_approved: false, tasks_completed: 0
+      }]);
+      
+      if (profileErr) { 
+        errorEl.textContent = 'Registration failed';
+        setLoading(document.getElementById('btnRegisterSubmit'), false);
+        return; 
+      }
 
-    localStorage.removeItem('demoBalance');
-    alert('Registered! Wait for admin approval, then sign in.');
-    showScreen('screenSplash');
+      localStorage.removeItem('demoBalance');
+      showToast('✓ Registered! Awaiting approval...');
+      document.getElementById('regFullName').value = '';
+      document.getElementById('regUsername').value = '';
+      document.getElementById('regEmail').value = '';
+      document.getElementById('regPassword').value = '';
+      document.getElementById('regPhone').value = '';
+      document.getElementById('regActivationCode').value = '';
+      
+      setLoading(document.getElementById('btnRegisterSubmit'), false);
+      showScreen('screenSplash');
+    } catch (err) {
+      errorEl.textContent = err.message;
+      setLoading(document.getElementById('btnRegisterSubmit'), false);
+    }
   };
 
   // Demo tasks
@@ -705,6 +882,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     localStorage.setItem('demoBalance', demoBalance);
     document.getElementById('pendingEarnings').textContent = demoBalance;
     showScreen('screenRegister');
+  };
+  document.getElementById('btnBackFromDemo').onclick = () => {
+    showScreen('screenSplash');
   };
 
   // Full tasks
@@ -727,40 +907,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
   });
 
-  // Support send
+  // Support
   document.getElementById('btnSendSupport').onclick = async () => {
     const msg = document.getElementById('supportMsg').value.trim();
-    if (!msg) return;
+    if (!msg || !currentUser) return;
     await supabase.from('support_messages').insert([{ user_id: currentUser.id, message: msg }]);
     document.getElementById('supportMsg').value = '';
-    document.getElementById('supportConfirm').textContent = 'Message sent!';
+    document.getElementById('supportConfirm').textContent = '✓ Message sent!';
   };
 
   // Withdraw
   document.getElementById('btnWithdraw').onclick = async () => {
-    if (currentUser.balance < 35000) return;
+    if (!currentUser || currentUser.balance < 35000) return;
     const amount = currentUser.balance;
-    await supabase.from('withdrawals').insert([{ user_id: currentUser.id, amount }]);
+    await supabase.from('withdrawals').insert([{ user_id: currentUser.id, amount, status: 'pending' }]);
     await supabase.from('profiles').update({ balance: 0 }).eq('id', currentUser.id);
     currentUser.balance = 0;
     updateDashboardUI();
-    showToast(`Withdrawal of ${amount} UGX requested`);
+    showToast(`✓ Withdrawal requested: ${amount} UGX`);
   };
 
   // Referral
   document.getElementById('btnCopyRef').onclick = () => {
-    navigator.clipboard.writeText(currentUser.ref_code);
-    showToast('Referral code copied!');
+    if (currentUser?.ref_code) {
+      navigator.clipboard.writeText(currentUser.ref_code);
+      showToast('✓ Copied!');
+    }
   };
 
   // Logout
   document.getElementById('btnLogout').onclick = async () => {
     await supabase.auth.signOut();
     currentUser = null;
+    clearErrors();
     showScreen('screenSplash');
   };
 
-  // Admin panel
+  // Admin
   document.getElementById('btnAdminPanel').onclick = () => {
     showScreen('screenAdmin');
     loadAdminPendingUsers();
