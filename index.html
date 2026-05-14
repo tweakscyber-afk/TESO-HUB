@@ -100,6 +100,25 @@
       border: 2px solid #005b9f;
       color: #005b9f;
     }
+
+    /* Modal overlay styles */
+    .modal-overlay {
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;
+      z-index:2500;
+    }
+    .modal-box {
+      background:white; padding:24px; border-radius:24px;
+      width:90%; max-width:360px; box-shadow:0 10px 30px rgba(0,0,0,0.2);
+      max-height:80vh; overflow-y:auto; position:relative;
+    }
+    .modal-close-btn {
+      position:absolute; top:12px; right:12px;
+      background:#eef2ff; border:none; border-radius:50%; width:40px; height:40px;
+      cursor:pointer; display:flex; align-items:center; justify-content:center;
+      font-size:1.2rem; color:#005b9f;
+    }
+    .modal-close-btn:hover { background:#005b9f; color:white; }
   </style>
 </head>
 <body>
@@ -161,7 +180,7 @@
     <button class="btn btn-primary" id="btnEmailLogin"><span class="material-symbols-outlined">email</span> Sign in with Email</button>
     <button class="btn btn-outline" id="btnPhoneLogin"><span class="material-symbols-outlined">smartphone</span> Sign in with Phone</button>
     <p style="text-align:center; font-size:0.8rem;">New? <a href="#" id="linkToRegister">Create account</a></p>
-    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backFromAuth">← Back</a></p>
+    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backFromAuth"><span class="material-symbols-outlined" style="font-size:0.9rem;">arrow_back</span> Back</a></p>
   </div>
 
   <!-- Email Login -->
@@ -171,7 +190,7 @@
     <input type="password" id="passwordInput" placeholder="Password" autocomplete="current-password">
     <button class="btn btn-primary" id="btnEmailSubmit"><span class="material-symbols-outlined">login</span> Sign In</button>
     <div id="emailError" style="color:#c62828; text-align:center; font-size:0.8rem;"></div>
-    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backToAuth1">← Back</a></p>
+    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backToAuth1"><span class="material-symbols-outlined" style="font-size:0.9rem;">arrow_back</span> Back</a></p>
   </div>
 
   <!-- Phone OTP Login -->
@@ -182,7 +201,7 @@
     <input type="text" id="otpInput" placeholder="6‑digit code" class="hidden" autocomplete="one-time-code">
     <button class="btn btn-primary hidden" id="btnVerifyOTP"><span class="material-symbols-outlined">check_circle</span> Verify</button>
     <div id="phoneError" style="color:#c62828; text-align:center; font-size:0.8rem;"></div>
-    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backToAuth2">← Back</a></p>
+    <p style="text-align:center; font-size:0.8rem;"><a href="#" id="backToAuth2"><span class="material-symbols-outlined" style="font-size:0.9rem;">arrow_back</span> Back</a></p>
   </div>
 
   <!-- Registration -->
@@ -240,7 +259,7 @@
     </div>
     <div id="tabAbout" class="hidden">
       <h4 style="color:#005b9f;">📘 About Back2‑School Earnie</h4>
-      <p style="font-size:0.9rem;">We help students and adults earn real money for school supplies through quick, fun tasks. All earnings are securely stored, and withdrawals are processed after approval.</p>
+      <p style="font-size:0.9rem;">We help students and adults earn real money for school supplies through quick, fun tasks. All earnings are securely stored, and withdrawals are processed after [...]
       <p style="font-size:0.85rem; margin-top:10px;"><strong>Trusted by:</strong> UNICEF, NNSF, NNSU, EU Commission, UNESCO, and more.</p>
       <p style="font-size:0.8rem;">support@back2school.com</p>
     </div>
@@ -263,7 +282,7 @@
     <div id="adminUsers" class="admin-tab"></div>
     <div id="adminSupport" class="admin-tab hidden"></div>
     <div id="adminWithdrawals" class="admin-tab hidden"></div>
-    <button class="btn btn-outline" id="btnBackToDashboard">Back to Dashboard</button>
+    <button class="btn btn-outline" id="btnBackToDashboard"><span class="material-symbols-outlined">arrow_back</span> Back to Dashboard</button>
   </div>
 </div>
 
@@ -271,12 +290,16 @@
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 const SUPABASE_URL = "https://ykfbadyublrmsrjvbuwz.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZmJhZHl1YmxybXNyanZidXd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzAyMDcsImV4cCI6MjA5MzY0NjIwN30.yrc[...]";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlrZmJhZHl1YmxybXNyanZidXd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNzAyMDcsImV4cCI6MjA5MzY0NjIwN30.yrc[...]
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 let demoBalance = 2000;
 let todayTaskCount = 0;
+
+// Navigation stack for history tracking
+let navigationStack = ['screenSplash'];
+let modalOpen = false;
 
 // ---------- HELPERS ----------
 function showToast(msg, isError = false) {
@@ -288,10 +311,25 @@ function showToast(msg, isError = false) {
 }
 
 function showScreen(id) {
+  if (modalOpen) return; // Don't switch screens while modal is open
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screen = document.getElementById(id);
   if (screen) {
     screen.classList.add('active');
+    // Update navigation stack
+    if (navigationStack[navigationStack.length - 1] !== id) {
+      navigationStack.push(id);
+    }
+  }
+}
+
+function goBack() {
+  if (modalOpen) return; // Don't go back while modal is open
+  if (navigationStack.length > 1) {
+    navigationStack.pop();
+    const previousScreen = navigationStack[navigationStack.length - 1];
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(previousScreen).classList.add('active');
   }
 }
 
@@ -313,6 +351,14 @@ function clearErrors() {
   document.getElementById('regError').textContent = '';
 }
 
+function closeModal() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) {
+    overlay.remove();
+    modalOpen = false;
+  }
+}
+
 // ---------- TASK GAMES ----------
 function launchSurvey(callback) {
   const questions = [
@@ -322,15 +368,24 @@ function launchSurvey(callback) {
   ];
   let idx = 0;
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2500;';
+  overlay.className = 'modal-overlay';
   const box = document.createElement('div');
-  box.style.cssText = 'background:white;padding:24px;border-radius:24px;width:90%;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,0.2);';
+  box.className = 'modal-box';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close-btn';
+  closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+  closeBtn.onclick = () => { overlay.remove(); modalOpen = false; callback(false); };
+  
+  box.appendChild(closeBtn);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+  modalOpen = true;
+  
   function render() {
-    if (idx >= questions.length) { overlay.remove(); callback(true); return; }
+    if (idx >= questions.length) { overlay.remove(); modalOpen = false; callback(true); return; }
     const q = questions[idx];
-    box.innerHTML = `<h4>${q.q}</h4>`;
+    box.innerHTML = `<button class="modal-close-btn" onclick="this.closest('.modal-overlay').remove(); window.gameCallback && window.gameCallback(false); window.modalOpen = false;"><span class="material-symbols-outlined">close</span></button><h4>${q.q}</h4>`;
     q.opts.forEach(opt => {
       const btn = document.createElement('div');
       btn.style.cssText = 'padding:12px;margin:6px 0;background:#e8f5e9;border-radius:40px;cursor:pointer;text-align:center;';
@@ -350,15 +405,24 @@ function launchQuiz(callback) {
   ];
   let idx = 0;
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2500;';
+  overlay.className = 'modal-overlay';
   const box = document.createElement('div');
-  box.style.cssText = 'background:white;padding:24px;border-radius:24px;width:90%;max-width:360px;';
+  box.className = 'modal-box';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close-btn';
+  closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+  closeBtn.onclick = () => { overlay.remove(); modalOpen = false; callback(false); };
+  
+  box.appendChild(closeBtn);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+  modalOpen = true;
+  
   function render() {
-    if (idx >= qs.length) { overlay.remove(); callback(true); return; }
+    if (idx >= qs.length) { overlay.remove(); modalOpen = false; callback(true); return; }
     const q = qs[idx];
-    box.innerHTML = `<h4>${q.q}</h4>`;
+    box.innerHTML = `<button class="modal-close-btn" onclick="this.closest('.modal-overlay').remove(); window.gameCallback && window.gameCallback(false); window.modalOpen = false;"><span class="material-symbols-outlined">close</span></button><h4>${q.q}</h4>`;
     q.opts.forEach(opt => {
       const btn = document.createElement('div');
       btn.style.cssText = 'padding:12px;margin:6px 0;background:#fff3e0;border-radius:40px;cursor:pointer;text-align:center;';
@@ -378,13 +442,23 @@ function launchMemoryGame(callback) {
   let cards = [...icons, ...icons].sort(() => Math.random() - 0.5);
   let opened = [], matched = [];
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2500;';
+  overlay.className = 'modal-overlay';
   const grid = document.createElement('div');
-  grid.style.cssText = 'background:white;padding:24px;border-radius:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;';
+  grid.style.cssText = 'background:white;padding:24px;border-radius:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:80vh;overflow-y:auto;position:relative;';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close-btn';
+  closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+  closeBtn.onclick = () => { overlay.remove(); modalOpen = false; callback(false); };
+  
+  grid.appendChild(closeBtn);
   overlay.appendChild(grid);
   document.body.appendChild(overlay);
+  modalOpen = true;
+  
   function render() {
-    grid.innerHTML = '';
+    const cardsContainer = document.createElement('div');
+    cardsContainer.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;';
     cards.forEach((icon, idx) => {
       const card = document.createElement('div');
       card.style.cssText = 'width:70px;height:70px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:#e3f2fd;border-radius:12px;cursor:pointer;';
@@ -397,27 +471,42 @@ function launchMemoryGame(callback) {
           if (cards[opened[0]] === cards[opened[1]]) {
             matched.push(...opened);
           }
-          setTimeout(() => { opened = []; render(); if (matched.length === cards.length) { overlay.remove(); callback(true); } }, 500);
+          setTimeout(() => { opened = []; render(); if (matched.length === cards.length) { overlay.remove(); modalOpen = false; callback(true); } }, 500);
         }
       };
-      grid.appendChild(card);
+      cardsContainer.appendChild(card);
     });
+    
+    const existingCards = grid.querySelector('div:not(.modal-close-btn)');
+    if (existingCards) existingCards.remove();
+    grid.appendChild(cardsContainer);
   }
   render();
 }
 
 function launchReflex(callback) {
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2500;';
+  overlay.className = 'modal-overlay';
   const box = document.createElement('div');
-  box.style.cssText = 'background:white;padding:24px;border-radius:24px;text-align:center;';
-  box.innerHTML = `<h3>⚡ Tap within 1.5s!</h3><div id="reflexTimer" style="font-size:2rem;margin:12px;">1.5</div><button id="tapReflexBtn" class="btn btn-primary">TAP</button>`;
+  box.className = 'modal-box';
+  box.style.cssText = 'text-align:center;';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close-btn';
+  closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+  closeBtn.onclick = () => { overlay.remove(); modalOpen = false; callback(false); };
+  
+  box.appendChild(closeBtn);
+  box.innerHTML += `<h3>⚡ Tap within 1.5s!</h3><div id="reflexTimer" style="font-size:2rem;margin:12px;">1.5</div><button id="tapReflexBtn" class="btn btn-primary">TAP</button>`;
   overlay.appendChild(box);
   document.body.appendChild(overlay);
+  modalOpen = true;
+  
   let startTime = Date.now();
   document.getElementById('tapReflexBtn').onclick = () => {
     const time = (Date.now() - startTime) / 1000;
     overlay.remove();
+    modalOpen = false;
     if (time <= 1.5) callback(true);
     else { showToast('Too slow!', true); }
   };
@@ -433,11 +522,20 @@ function spinWheel(callback) {
 function launchTicTacToe(callback) {
   const board = Array(9).fill(null);
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:2500;';
+  overlay.className = 'modal-overlay';
   const grid = document.createElement('div');
-  grid.style.cssText = 'background:white;padding:24px;border-radius:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
+  grid.style.cssText = 'background:white;padding:24px;border-radius:24px;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;position:relative;';
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close-btn';
+  closeBtn.innerHTML = '<span class="material-symbols-outlined">close</span>';
+  closeBtn.onclick = () => { overlay.remove(); modalOpen = false; callback(false); };
+  
+  grid.appendChild(closeBtn);
   overlay.appendChild(grid);
   document.body.appendChild(overlay);
+  modalOpen = true;
+  
   function checkWin() {
     const wins = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     for (const [a,b,c] of wins) if (board[a] && board[a]===board[b] && board[a]===board[c]) return board[a];
@@ -449,12 +547,13 @@ function launchTicTacToe(callback) {
       const pick = empty[Math.floor(Math.random()*empty.length)];
       board[pick] = 'O';
       render();
-      if (checkWin()==='O') { overlay.remove(); callback(false); showToast('Computer won!', true); }
-      else if (!board.includes(null)) { overlay.remove(); callback(false); showToast('Draw!', true); }
+      if (checkWin()==='O') { overlay.remove(); modalOpen = false; callback(false); showToast('Computer won!', true); }
+      else if (!board.includes(null)) { overlay.remove(); modalOpen = false; callback(false); showToast('Draw!', true); }
     }
   }
   function render() {
-    grid.innerHTML = '';
+    const boardContainer = document.createElement('div');
+    boardContainer.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:4px;';
     board.forEach((v,i) => {
       const cell = document.createElement('div');
       cell.style.cssText = 'width:60px;height:60px;display:flex;align-items:center;justify-content:center;background:#e8f5e9;border-radius:12px;font-size:2rem;cursor:pointer;';
@@ -463,12 +562,16 @@ function launchTicTacToe(callback) {
         if (v || checkWin()) return;
         board[i] = 'X';
         render();
-        if (checkWin()==='X') { overlay.remove(); callback(true); }
-        else if (!board.includes(null)) { overlay.remove(); callback(false); }
+        if (checkWin()==='X') { overlay.remove(); modalOpen = false; callback(true); }
+        else if (!board.includes(null)) { overlay.remove(); modalOpen = false; callback(false); }
         else setTimeout(computerMove, 400);
       };
-      grid.appendChild(cell);
+      boardContainer.appendChild(cell);
     });
+    
+    const existingBoard = grid.querySelector('div:not(.modal-close-btn)');
+    if (existingBoard) existingBoard.remove();
+    grid.appendChild(boardContainer);
   }
   render();
 }
@@ -511,7 +614,7 @@ async function performTask(type, baseReward) {
   });
   if (typeof result === 'number') reward = result;
   else if (result === true) success = true;
-  else { showToast('Task failed, no reward'); return; }
+  else { showToast('Task cancelled'); return; }
 
   if (reward > 0) {
     const { error } = await supabase.from('profiles').update({
@@ -606,6 +709,11 @@ window.updateWithdrawal = async (id, status) => {
   loadAdminWithdrawals();
 };
 
+// Expose navigation globally
+window.goBack = goBack;
+window.showScreen = showScreen;
+window.modalOpen = false;
+
 // ---------- INITIALIZATION ----------
 document.addEventListener('DOMContentLoaded', async () => {
   clearErrors();
@@ -617,6 +725,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
       if (profile?.is_approved) {
         currentUser = profile;
+        navigationStack = ['screenDashboard'];
         showScreen('screenDashboard');
         updateDashboardUI();
         const today = new Date().toISOString().slice(0,10);
@@ -625,13 +734,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('dailyCount').textContent = todayTaskCount;
       } else {
         await supabase.auth.signOut();
+        navigationStack = ['screenSplash'];
         showScreen('screenSplash');
       }
     } else {
+      navigationStack = ['screenSplash'];
       showScreen('screenSplash');
     }
   } catch (err) {
     console.error('Session error:', err);
+    navigationStack = ['screenSplash'];
     showScreen('screenSplash');
   }
 
@@ -664,22 +776,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('backToAuth1').onclick = e => { 
     e.preventDefault(); 
     clearErrors();
-    showScreen('screenAuth'); 
+    goBack();
   };
   document.getElementById('backToAuth2').onclick = e => { 
     e.preventDefault(); 
     clearErrors();
-    showScreen('screenAuth'); 
+    goBack();
   };
   document.getElementById('backFromAuth').onclick = e => { 
     e.preventDefault(); 
     clearErrors();
-    showScreen('screenSplash'); 
+    goBack();
   };
   document.getElementById('goToAuth').onclick = e => { 
     e.preventDefault(); 
     clearErrors();
-    showScreen('screenAuth'); 
+    goBack();
   };
 
   // Email login - FIXED
@@ -716,6 +828,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentUser = profile;
       document.getElementById('emailInput').value = '';
       document.getElementById('passwordInput').value = '';
+      navigationStack = ['screenDashboard'];
       showScreen('screenDashboard');
       updateDashboardUI();
       
@@ -793,6 +906,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       currentUser = profile;
       document.getElementById('phoneLoginInput').value = '';
       document.getElementById('otpInput').value = '';
+      navigationStack = ['screenDashboard'];
       showScreen('screenDashboard');
       updateDashboardUI();
       
@@ -864,6 +978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.getElementById('regActivationCode').value = '';
       
       setLoading(document.getElementById('btnRegisterSubmit'), false);
+      navigationStack = ['screenSplash'];
       showScreen('screenSplash');
     } catch (err) {
       errorEl.textContent = err.message;
@@ -884,7 +999,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     showScreen('screenRegister');
   };
   document.getElementById('btnBackFromDemo').onclick = () => {
-    showScreen('screenSplash');
+    goBack();
   };
 
   // Full tasks
@@ -940,6 +1055,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await supabase.auth.signOut();
     currentUser = null;
     clearErrors();
+    navigationStack = ['screenSplash'];
     showScreen('screenSplash');
   };
 
@@ -949,8 +1065,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadAdminPendingUsers();
   };
   document.getElementById('btnBackToDashboard').onclick = () => {
-    showScreen('screenDashboard');
-    updateDashboardUI();
+    goBack();
   };
 
   // Admin tabs
