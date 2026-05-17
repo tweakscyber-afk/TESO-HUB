@@ -73,8 +73,9 @@
 
     .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20; vertical-align:middle; }
     .nav-tabs { display:flex; justify-content:center; gap:5px; margin:5px 0; flex-wrap:wrap; }
-    .nav-tab { padding:10px 18px; border-radius:40px; font-size:0.8rem; cursor:pointer; font-weight:500; background:#eef2ff; color:#1a2a4a; }
+    .nav-tab { padding:10px 18px; border-radius:40px; font-size:0.8rem; cursor:pointer; font-weight:500; background:#eef2ff; color:#1a2a4a; transition:all 0.2s; }
     .nav-tab.active { background:#005b9f; color:white; }
+    .nav-tab:hover { background:#d4e7fe; }
     .hidden { display:none !important; }
     .admin-badge { background:#ff9800; color:white; padding:2px 10px; border-radius:20px; font-size:0.7rem; margin-left:8px; }
     
@@ -311,12 +312,11 @@ function showToast(msg, isError = false) {
 }
 
 function showScreen(id) {
-  if (modalOpen) return; // Don't switch screens while modal is open
+  if (modalOpen) return;
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const screen = document.getElementById(id);
   if (screen) {
     screen.classList.add('active');
-    // Update navigation stack
     if (navigationStack[navigationStack.length - 1] !== id) {
       navigationStack.push(id);
     }
@@ -324,7 +324,7 @@ function showScreen(id) {
 }
 
 function goBack() {
-  if (modalOpen) return; // Don't go back while modal is open
+  if (modalOpen) return;
   if (navigationStack.length > 1) {
     navigationStack.pop();
     const previousScreen = navigationStack[navigationStack.length - 1];
@@ -359,6 +359,60 @@ function closeModal() {
   }
 }
 
+// ========== TAB SWITCHING FIX ==========
+function initTabSwitching() {
+  // Dashboard tabs (Tasks/Support/About)
+  const dashboardTabs = document.querySelectorAll('#screenDashboard .nav-tab');
+  dashboardTabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tabName = tab.getAttribute('data-tab');
+      
+      // Remove active class from all tabs
+      dashboardTabs.forEach(t => t.classList.remove('active'));
+      
+      // Hide all tab content
+      document.getElementById('tabTasks')?.classList.add('hidden');
+      document.getElementById('tabSupport')?.classList.add('hidden');
+      document.getElementById('tabAbout')?.classList.add('hidden');
+      
+      // Activate clicked tab
+      tab.classList.add('active');
+      
+      // Show corresponding tab content
+      const tabContent = document.getElementById(tabName);
+      if (tabContent) {
+        tabContent.classList.remove('hidden');
+      }
+    });
+  });
+
+  // Admin dashboard tabs
+  const adminTabs = document.querySelectorAll('#screenAdmin .nav-tab');
+  adminTabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      const tabName = tab.getAttribute('data-admin-tab');
+      
+      // Remove active class from all tabs
+      adminTabs.forEach(t => t.classList.remove('active'));
+      
+      // Hide all admin tab content
+      const adminTabContents = document.querySelectorAll('.admin-tab');
+      adminTabContents.forEach(content => content.classList.add('hidden'));
+      
+      // Activate clicked tab
+      tab.classList.add('active');
+      
+      // Show corresponding admin tab content
+      const tabContent = document.getElementById(tabName);
+      if (tabContent) {
+        tabContent.classList.remove('hidden');
+      }
+    });
+  });
+}
+
 // ---------- TASK GAMES ----------
 function launchSurvey(callback) {
   const questions = [
@@ -385,7 +439,7 @@ function launchSurvey(callback) {
   function render() {
     if (idx >= questions.length) { overlay.remove(); modalOpen = false; callback(true); return; }
     const q = questions[idx];
-    box.innerHTML = `<button class="modal-close-btn" onclick="this.closest('.modal-overlay').remove(); window.gameCallback && window.gameCallback(false); window.modalOpen = false;"><span class="material-symbols-outlined">close</span></button><h4>${q.q}</h4>`;
+    box.innerHTML = `<button class="modal-close-btn"><span class="material-symbols-outlined">close</span></button><h3>${q.q}</h3>`;
     q.opts.forEach(opt => {
       const btn = document.createElement('div');
       btn.style.cssText = 'padding:12px;margin:6px 0;background:#e8f5e9;border-radius:40px;cursor:pointer;text-align:center;';
@@ -422,7 +476,7 @@ function launchQuiz(callback) {
   function render() {
     if (idx >= qs.length) { overlay.remove(); modalOpen = false; callback(true); return; }
     const q = qs[idx];
-    box.innerHTML = `<button class="modal-close-btn" onclick="this.closest('.modal-overlay').remove(); window.gameCallback && window.gameCallback(false); window.modalOpen = false;"><span class="material-symbols-outlined">close</span></button><h4>${q.q}</h4>`;
+    box.innerHTML = `<button class="modal-close-btn"><span class="material-symbols-outlined">close</span></button><h3>${q.q}</h3>`;
     q.opts.forEach(opt => {
       const btn = document.createElement('div');
       btn.style.cssText = 'padding:12px;margin:6px 0;background:#fff3e0;border-radius:40px;cursor:pointer;text-align:center;';
@@ -718,6 +772,9 @@ window.modalOpen = false;
 document.addEventListener('DOMContentLoaded', async () => {
   clearErrors();
   
+  // Initialize tab switching
+  initTabSwitching();
+  
   // Restore session
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -794,7 +851,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     goBack();
   };
 
-  // Email login - FIXED
+  // Email login
   document.getElementById('btnEmailSubmit').onclick = async () => {
     const email = document.getElementById('emailInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
@@ -843,7 +900,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // Phone OTP - FIXED
+  // Phone OTP
   let phoneNumber = '';
   document.getElementById('btnSendOTP').onclick = async () => {
     const phone = document.getElementById('phoneLoginInput').value.trim();
@@ -921,7 +978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  // Registration – FIXED
+  // Registration
   document.getElementById('btnRegisterSubmit').onclick = async () => {
     const name = document.getElementById('regFullName').value.trim();
     const username = document.getElementById('regUsername').value.trim();
@@ -998,89 +1055,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('pendingEarnings').textContent = demoBalance;
     showScreen('screenRegister');
   };
-  document.getElementById('btnBackFromDemo').onclick = () => {
-    goBack();
-  };
 
-  // Full tasks
+  // Full task handlers
   document.getElementById('fullSurvey').onclick = () => performTask('survey', 500);
   document.getElementById('fullQuiz').onclick = () => performTask('quiz', 500);
   document.getElementById('fullMemory').onclick = () => performTask('memory', 500);
   document.getElementById('fullReflex').onclick = () => performTask('reflex', 500);
-  document.getElementById('fullSpin').onclick = () => performTask('spin', 0);
+  document.getElementById('fullSpin').onclick = () => performTask('spin', 500);
   document.getElementById('fullTicTac').onclick = () => performTask('tictactoe', 500);
 
-  // Dashboard tabs
-  document.querySelectorAll('.nav-tab:not([data-admin-tab])').forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll('.nav-tab[data-tab]').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById('tabTasks').classList.add('hidden');
-      document.getElementById('tabSupport').classList.add('hidden');
-      document.getElementById('tabAbout').classList.add('hidden');
-      document.getElementById(tab.dataset.tab).classList.remove('hidden');
-    };
-  });
-
-  // Support
+  // Support and other buttons
   document.getElementById('btnSendSupport').onclick = async () => {
     const msg = document.getElementById('supportMsg').value.trim();
-    if (!msg || !currentUser) return;
-    await supabase.from('support_messages').insert([{ user_id: currentUser.id, message: msg }]);
-    document.getElementById('supportMsg').value = '';
-    document.getElementById('supportConfirm').textContent = '✓ Message sent!';
-  };
-
-  // Withdraw
-  document.getElementById('btnWithdraw').onclick = async () => {
-    if (!currentUser || currentUser.balance < 35000) return;
-    const amount = currentUser.balance;
-    await supabase.from('withdrawals').insert([{ user_id: currentUser.id, amount, status: 'pending' }]);
-    await supabase.from('profiles').update({ balance: 0 }).eq('id', currentUser.id);
-    currentUser.balance = 0;
-    updateDashboardUI();
-    showToast(`✓ Withdrawal requested: ${amount} UGX`);
-  };
-
-  // Referral
-  document.getElementById('btnCopyRef').onclick = () => {
-    if (currentUser?.ref_code) {
-      navigator.clipboard.writeText(currentUser.ref_code);
-      showToast('✓ Copied!');
+    if (!msg) { showToast('Enter a message', true); return; }
+    if (!currentUser) { showToast('Not logged in', true); return; }
+    const { error } = await supabase.from('support_messages').insert([{ user_id: currentUser.id, message: msg }]);
+    if (error) { showToast('Error sending', true); } else { 
+      showToast('Message sent!');
+      document.getElementById('supportMsg').value = '';
+      document.getElementById('supportConfirm').textContent = '✓ Thank you for your message. We\'ll get back to you soon!';
     }
   };
 
-  // Logout
+  document.getElementById('btnWithdraw').onclick = async () => {
+    if (!currentUser || currentUser.balance < 35000) { showToast('Not eligible', true); return; }
+    const { error } = await supabase.from('withdrawals').insert([{ user_id: currentUser.id, amount: 35000, status: 'pending' }]);
+    if (!error) { 
+      currentUser.balance = 0;
+      updateDashboardUI();
+      showToast('Withdrawal request submitted!');
+    } else { showToast('Error', true); }
+  };
+
+  document.getElementById('btnCopyRef').onclick = () => {
+    const ref = currentUser?.ref_code || 'N/A';
+    navigator.clipboard.writeText(ref).then(() => showToast(`Copied: ${ref}`));
+  };
+
   document.getElementById('btnLogout').onclick = async () => {
     await supabase.auth.signOut();
     currentUser = null;
-    clearErrors();
     navigationStack = ['screenSplash'];
     showScreen('screenSplash');
+    showToast('Logged out');
   };
 
-  // Admin
   document.getElementById('btnAdminPanel').onclick = () => {
     showScreen('screenAdmin');
     loadAdminPendingUsers();
-  };
-  document.getElementById('btnBackToDashboard').onclick = () => {
-    goBack();
+    loadAdminSupport();
+    loadAdminWithdrawals();
   };
 
-  // Admin tabs
-  document.querySelectorAll('.nav-tab[data-admin-tab]').forEach(tab => {
-    tab.onclick = () => {
-      document.querySelectorAll('.nav-tab[data-admin-tab]').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      document.querySelectorAll('.admin-tab').forEach(d => d.classList.add('hidden'));
-      const target = document.getElementById(tab.dataset.adminTab);
-      target.classList.remove('hidden');
-      if (tab.dataset.adminTab === 'adminUsers') loadAdminPendingUsers();
-      else if (tab.dataset.adminTab === 'adminSupport') loadAdminSupport();
-      else if (tab.dataset.adminTab === 'adminWithdrawals') loadAdminWithdrawals();
-    };
-  });
+  document.getElementById('btnBackToDashboard').onclick = () => showScreen('screenDashboard');
+  document.getElementById('btnBackFromDemo').onclick = () => showScreen('screenSplash');
 });
 </script>
 </body>
